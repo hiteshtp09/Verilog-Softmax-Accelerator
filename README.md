@@ -10,22 +10,22 @@ The **Softmax function** converts a group of real-valued scores, often called *l
 
 For an input vector
 
-\[
+$$
 \mathbf{x} = [x_0, x_1, \ldots, x_{N-1}],
-\]
+$$
 
-the Softmax output for element \(i\) is
+the Softmax output for element $i$ is
 
-\[
+$$
 \boxed{\operatorname{softmax}(x_i) =
 \frac{e^{x_i}}{\sum_{j=0}^{N-1} e^{x_j}}}
-\]
+$$
 
 where:
-- \(x_i\) is the \(i\)-th input logit,
-- \(e^{x_i}\) is the exponential of that logit,
+- $x_i$ is the $i$-th input logit,
+- $e^{x_i}$ is the exponential of that logit,
 - the denominator sums the exponentials of all logits,
-- \(N\) is the number of input values.
+- $N$ is the number of input values.
 
 A larger logit generally receives a larger Softmax probability. Softmax preserves the ranking of the logits while turning the scores into normalized outputs.
 
@@ -44,22 +44,22 @@ Softmax is useful because it:
 
 ## 2. Numerically Stable Softmax
 
-Directly calculating \(e^{x_i}\) can cause very large intermediate values when logits are large. A common numerically stable form subtracts the maximum logit from every input.
+Directly calculating $e^{x_i}$ can cause very large intermediate values when logits are large. A common numerically stable form subtracts the maximum logit from every input.
 
 Let
 
-\[
+$$
 m = \max_j(x_j).
-\]
+$$
 
 Then
 
-\[
+$$
 \boxed{\operatorname{softmax}(x_i) =
 \frac{e^{x_i-m}}{\sum_{j=0}^{N-1}e^{x_j-m}}}
-\]
+$$
 
-This is mathematically equivalent to the original formula because the same positive factor \(e^{-m}\) cancels from the numerator and denominator. The shifted exponent arguments are non-positive, reducing the risk of exponential overflow.
+This is mathematically equivalent to the original formula because the same positive factor $e^{-m}$ cancels from the numerator and denominator. The shifted exponent arguments are non-positive, reducing the risk of exponential overflow.
 
 This design follows a max-subtraction approach and uses an exponential lookup-table approximation rather than a full-precision exponential operator.
 
@@ -69,41 +69,41 @@ This design follows a max-subtraction approach and uses an exponential lookup-ta
 
 The simulation was run with the following four logits:
 
-\[
+$$
 \mathbf{x} = [27,\;21,\;23,\;19].
-\]
+$$
 
 ### Step 1 — Find the maximum
 
-\[
+$$
 m = \max(27,21,23,19) = 27.
-\]
+$$
 
 ### Step 2 — Subtract the maximum from each logit
 
-\[
+$$
 \mathbf{x}-m = [0,\;-6,\;-4,\;-8].
-\]
+$$
 
 ### Step 3 — Calculate the exponential terms
 
 For an ideal floating-point Softmax calculation, the terms would be
 
-\[
+$$
 [e^0,\;e^{-6},\;e^{-4},\;e^{-8}]
-\]
+$$
 
 which are approximately
 
-\[
+$$
 [1,\;0.002479,\;0.018316,\;0.000335].
-\]
+$$
 
 Their sum is approximately
 
-\[
+$$
 S = 1 + e^{-6} + e^{-4} + e^{-8} \approx 1.021130.
-\]
+$$
 
 ### Step 4 — Normalize the terms
 
@@ -165,15 +165,15 @@ The screenshot shows the top-level testbench signals over time. The `done` signa
 
 The RTL represents input logits in **signed Q8.8 fixed-point format**. In this format, the stored 16-bit integer is scaled by **256 (2^8)**: eight fractional bits are reserved, so one real-valued unit corresponds to 256 stored counts. To convert a stored raw value back to its real value, divide it by 256; to encode a real value, multiply it by 256 and round to an integer.
 
-\[\text{raw input} = \text{real-valued logit} \times 256,\qquad \text{real-valued logit} = \frac{\text{raw input}}{256}.\]
+$$\text{raw input} = \text{real-valued logit} \times 256,\qquad \text{real-valued logit} = \frac{\text{raw input}}{256}.$$
 
-For example, the real logit \(1.5\) is stored as \(1.5 \times 256 = 384\), while \(-2.0\) is stored as \(-2.0 \times 256 = -512\). The factor 256 is a binary scaling convention, not a multiplier that changes the intended Softmax result: it lets the hardware represent fractional values using integers. The RTL must interpret the stored values consistently when computing differences and looking up exponential values.
+For example, the real logit $1.5$ is stored as $1.5 \times 256 = 384$, while $-2.0$ is stored as $-2.0 \times 256 = -512$. The factor 256 is a binary scaling convention, not a multiplier that changes the intended Softmax result: it lets the hardware represent fractional values using integers. The RTL must interpret the stored values consistently when computing differences and looking up exponential values.
 
-The design computes the difference between the maximum logit and each input in this same Q8.8 representation. The exponential LUT uses steps of \(1/16\); because Q8.8 has 256 counts per unit, one LUT step corresponds to \(256/16 = 16\) raw counts. The interpolation logic uses the lower four bits of the difference to estimate values between LUT entries. Differences of 16.0 or greater (raw difference \(4096 = 16 \times 256\)) are treated as zero contribution by the LUT approximation.
+The design computes the difference between the maximum logit and each input in this same Q8.8 representation. The exponential LUT uses steps of $1/16$; because Q8.8 has 256 counts per unit, one LUT step corresponds to $256/16 = 16$ raw counts. The interpolation logic uses the lower four bits of the difference to estimate values between LUT entries. Differences of 16.0 or greater (raw difference $4096 = 16 \times 256$) are treated as zero contribution by the LUT approximation.
 
-To avoid implementing a general-purpose exponential operator, the RTL uses a lookup table (LUT) for the shifted difference \(d = m - x_i\).
+To avoid implementing a general-purpose exponential operator, the RTL uses a lookup table (LUT) for the shifted difference $d = m - x_i$.
 
-- The LUT samples \(e^{-d}\) at intervals of \(1/16\) and uses linear interpolation between adjacent entries.
+- The LUT samples $e^{-d}$ at intervals of $1/16$ and uses linear interpolation between adjacent entries.
 - The exponential values use a fixed-point scale of 32768 (Q1.15-style representation).
 - Differences of 16.0 or greater are treated as zero contribution by the approximation.
 - The probability output uses a scale of 65535, followed by integer rounding.
@@ -274,11 +274,11 @@ Yosys reported **“Found and reported 0 problems.”** in the structural check.
 
 ### Yosys check and statistics
 
-![Yosys generic synthesis statistics and successful structural check](synthesis/screenshots/yosys_check_and_statistics.png)
+![Yosys generic synthesis statistics and successful structural check](synthesis/screenshots/yosys_synthesis.png)
 
 ### Final synthesis report
 
-![Final Yosys synthesis log output](synthesis/screenshots/yosys_final_statistics.png)
+![Final Yosys synthesis log output](synthesis/screenshots/yosys_synthesis1.png)
 
 **Interpretation:** These are generic synthesis statistics, not a physical area, timing, or power result. The cell counts are not Sky130 standard-cell counts because a Sky130 technology-mapping flow has not yet been performed.
 

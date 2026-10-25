@@ -1,0 +1,222 @@
+$date
+	Mon Oct 26 01:30:03 2026
+$end
+$version
+	Icarus Verilog
+$end
+$timescale
+	1ps
+$end
+$scope module softmax_tb $end
+$var wire 2032 ! probs [2031:0] $end
+$var wire 1 " done $end
+$var parameter 32 # MAX_N $end
+$var reg 1 $ clk $end
+$var reg 4064 % logits [4063:0] $end
+$var reg 8 & n [7:0] $end
+$var reg 1 ' rst $end
+$var reg 1 ( start $end
+$var integer 32 ) i [31:0] $end
+$var integer 32 * input_n [31:0] $end
+$var integer 32 + input_value [31:0] $end
+$var real 1 , probability $end
+$var integer 32 - probability_sum [31:0] $end
+$var integer 32 . scan_status [31:0] $end
+$scope module dut $end
+$var wire 1 $ clk $end
+$var wire 4064 / logits [4063:0] $end
+$var wire 8 0 n [7:0] $end
+$var wire 1 ' rst $end
+$var wire 1 ( start $end
+$var parameter 3 1 EXP_SUM $end
+$var parameter 3 2 FIND_MAX $end
+$var parameter 3 3 FINISH $end
+$var parameter 3 4 IDLE $end
+$var parameter 32 5 MAX_N $end
+$var parameter 3 6 NORMALIZE $end
+$var reg 8 7 count [7:0] $end
+$var reg 33 8 diff [32:0] $end
+$var reg 1 " done $end
+$var reg 8 9 idx [7:0] $end
+$var reg 32 : max_val [31:0] $end
+$var reg 32 ; numerator [31:0] $end
+$var reg 2032 < probs [2031:0] $end
+$var reg 3 = state [2:0] $end
+$var reg 32 > sum_exp [31:0] $end
+$var integer 32 ? i [31:0] $end
+$scope function exp_lut $end
+$var reg 33 @ d [32:0] $end
+$upscope $end
+$upscope $end
+$upscope $end
+$enddefinitions $end
+$comment Show the parameter values. $end
+$dumpall
+b11 6
+b1111111 5
+b0 4
+b100 3
+b1 2
+b10 1
+b1111111 #
+$end
+#0
+$dumpvars
+bx @
+b1111111 ?
+b0 >
+b0 =
+b0 <
+bx ;
+b0 :
+b0 9
+bx 8
+b0 7
+b0 0
+b0 /
+bx .
+bx -
+r0 ,
+bx +
+bx *
+bx )
+0(
+1'
+b0 &
+b0 %
+0$
+0"
+b0 !
+$end
+#5000
+b1111111 ?
+1$
+#10000
+0$
+#15000
+b1111111 ?
+1$
+#20000
+1(
+0$
+b10101000000000000000000000000000110110000000000000000000000000001001100000000000000000000000000010111 %
+b10101000000000000000000000000000110110000000000000000000000000001001100000000000000000000000000010111 /
+b10101 +
+b100 )
+b100 &
+b100 0
+b1 .
+b100 *
+0'
+#25000
+b1 =
+b10111 :
+b100 7
+b1111111 ?
+1$
+#30000
+0(
+0$
+#35000
+b1 9
+1$
+#40000
+0$
+#45000
+b10 9
+1$
+#50000
+0$
+#55000
+b11 9
+b11011 :
+1$
+#60000
+0$
+#65000
+b10 =
+b0 9
+1$
+#70000
+0$
+#75000
+b1 9
+b1001011000 >
+b100 @
+b100 8
+1$
+#80000
+0$
+#85000
+b10 9
+b1001100011 >
+b1000 @
+b1000 8
+1$
+#90000
+0$
+#95000
+b11 9
+b1000001001100011 >
+b0 @
+b0 8
+1$
+#100000
+0$
+#105000
+b11 =
+b0 9
+b1000001010110100 >
+b110 @
+b110 8
+1$
+#110000
+0$
+#115000
+b1 9
+b10010010111 !
+b10010010111 <
+b10010110000011111100000010 ;
+1$
+#120000
+0$
+#125000
+b10 9
+b101100000010010010111 !
+b101100000010010010111 <
+b10110100000101001111 ;
+1$
+#130000
+0$
+#135000
+b11 9
+b111110101011010000000000000101100000010010010111 !
+b111110101011010000000000000101100000010010010111 <
+b1111111111111111100000101011010 ;
+1$
+#140000
+0$
+#145000
+b100 =
+b10011111111110101011010000000000000101100000010010010111 !
+b10011111111110101011010000000000000101100000010010010111 <
+b10100010100000100001001 ;
+1$
+#150000
+0$
+#155000
+r0.002426184481574731 ,
+b100 )
+b10000000000000000 -
+b0 =
+1"
+1$
+#160000
+0$
+#165000
+0"
+1$
+#170000
+0$
+#175000
+1$

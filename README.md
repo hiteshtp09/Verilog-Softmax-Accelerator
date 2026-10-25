@@ -6,121 +6,99 @@ A Verilog RTL implementation of an **N-input Softmax accelerator** using an FSM-
 
 ## 1. What Is the Softmax Function?
 
-The **Softmax function** converts a group of real-valued scores, often called *logits*, into a group of values that can be interpreted as a probability distribution. Each output is between 0 and 1, and the ideal mathematical outputs sum to 1.
+The Softmax function converts a group of real-valued scores, often called logits, into values that form a probability distribution. Each output is between 0 and 1, and the ideal mathematical outputs add up to 1.
 
-For an input vector
+For an input vector containing N values:
 
-$$
-\mathbf{x} = [x_0, x_1, \ldots, x_{N-1}],
-$$
+`x = [x0, x1, ..., x(N-1)]`
 
-the Softmax output for element $i$ is
+The Softmax output for element i is:
 
 $$
-\boxed{\operatorname{softmax}(x_i) =
-\frac{e^{x_i}}{\sum_{j=0}^{N-1} e^{x_j}}}
+\mathrm{Softmax}(x_i) = \frac{e^{x_i}}{\sum_{j=0}^{N-1} e^{x_j}}
 $$
 
-where:
-- $x_i$ is the $i$-th input logit,
-- $e^{x_i}$ is the exponential of that logit,
-- the denominator sums the exponentials of all logits,
-- $N$ is the number of input values.
+Here:
+- `x_i` is the input logit at index i.
+- `exp(x_i)` means e raised to the power of `x_i`.
+- The denominator is the sum of the exponentials of all input logits.
+- `N` is the number of input values.
 
-A larger logit generally receives a larger Softmax probability. Softmax preserves the ranking of the logits while turning the scores into normalized outputs.
+A larger logit generally receives a larger Softmax output. Softmax preserves the ranking of the logits while converting the scores into normalized values.
 
 ### Where and why is Softmax used?
 
-Softmax is commonly used in machine-learning classification systems, especially at the output layer of a neural network when a model is expected to choose among mutually exclusive classes. For example, a classifier might produce scores for *cat*, *dog*, and *bird*. Softmax converts those scores into normalized values that help express the model's relative confidence across those classes.
+Softmax is commonly used in machine-learning classification systems, especially at the output layer of a neural network when a model chooses among classes. For example, a classifier might produce scores for cat, dog, and bird. Softmax converts those scores into normalized values that express each class's relative score.
 
 Softmax is useful because it:
 - converts unrestricted scores into non-negative normalized outputs;
-- makes the outputs easier to compare as a distribution across classes;
-- is differentiable, making it suitable for neural-network training with gradient-based optimization.
+- makes outputs easier to compare across classes;
+- is differentiable, so it can be used during neural-network training with gradient-based optimization.
 
-**Important:** Softmax outputs are not automatically calibrated probabilities of real-world correctness. Their interpretation depends on the model, training objective, and calibration.
+**Note:** Softmax outputs are not automatically calibrated probabilities of real-world correctness. Their interpretation depends on the model and how it was trained.
 
 ---
 
 ## 2. Numerically Stable Softmax
 
-Directly calculating $e^{x_i}$ can cause very large intermediate values when logits are large. A common numerically stable form subtracts the maximum logit from every input.
+Directly calculating `exp(x_i)` can produce very large intermediate values when logits are large. A common numerically stable method subtracts the largest logit from every input.
 
-Let
+Let `m = max(x_0, x_1, ..., x_(N-1))`.
 
-$$
-m = \max_j(x_j).
-$$
+Then calculate:
 
-Then
+`Softmax(x_i) = exp(x_i - m) / sum(exp(x_j - m)), for j = 0 to N-1`
 
-$$
-\boxed{\operatorname{softmax}(x_i) =
-\frac{e^{x_i-m}}{\sum_{j=0}^{N-1}e^{x_j-m}}}
-$$
+This is mathematically equivalent to the original formula because the same positive factor, `exp(-m)`, cancels from the numerator and denominator. The shifted exponent values are zero or negative, which reduces the risk of exponential overflow.
 
-This is mathematically equivalent to the original formula because the same positive factor $e^{-m}$ cancels from the numerator and denominator. The shifted exponent arguments are non-positive, reducing the risk of exponential overflow.
-
-This design follows a max-subtraction approach and uses an exponential lookup-table approximation rather than a full-precision exponential operator.
+This project follows the max-subtraction approach and uses an exponential lookup-table (LUT) approximation instead of a full-precision exponential operator.
 
 ---
 
 ## 3. Example Using the Project's Test Inputs
 
-The simulation was run with the following four logits:
+The simulation was run with these four logits:
 
-$$
-\mathbf{x} = [27,\;21,\;23,\;19].
-$$
+`x = [27, 21, 23, 19]`
 
-### Step 1 — Find the maximum
+### Step 1 - Find the maximum
 
-$$
-m = \max(27,21,23,19) = 27.
-$$
+`m = max(27, 21, 23, 19) = 27`
 
-### Step 2 — Subtract the maximum from each logit
+### Step 2 - Subtract the maximum from each logit
 
-$$
-\mathbf{x}-m = [0,\;-6,\;-4,\;-8].
-$$
+`x - m = [0, -6, -4, -8]`
 
-### Step 3 — Calculate the exponential terms
+### Step 3 - Calculate the exponential terms
 
-For an ideal floating-point Softmax calculation, the terms would be
+For an ideal floating-point Softmax calculation, the terms are:
 
-$$
-[e^0,\;e^{-6},\;e^{-4},\;e^{-8}]
-$$
+`[exp(0), exp(-6), exp(-4), exp(-8)]`
 
-which are approximately
+Approximately, these are:
 
-$$
-[1,\;0.002479,\;0.018316,\;0.000335].
-$$
+`[1, 0.002479, 0.018316, 0.000335]`
 
-Their sum is approximately
+Their sum is approximately:
 
-$$
-S = 1 + e^{-6} + e^{-4} + e^{-8} \approx 1.021130.
-$$
+`S = 1 + exp(-6) + exp(-4) + exp(-8) = 1.021130`
 
-### Step 4 — Normalize the terms
+### Step 4 - Normalize the terms
 
 The ideal mathematical outputs are approximately:
 
-| Input logit | Shifted logit | Ideal Softmax output (approx.) |
+| Input logit | Shifted logit | Ideal Softmax output |
 |---:|---:|---:|
 | 27 | 0 | 0.97931 |
 | 21 | -6 | 0.00243 |
 | 23 | -4 | 0.01794 |
 | 19 | -8 | 0.00033 |
 
-The largest input, **27**, receives the largest output. The outputs are normalized so their ideal sum is 1.
+The largest input, 27, receives the largest output. The ideal outputs add up to approximately 1.
 
-### Step 5 — Compare with this RTL simulation
+### Step 5 - Compare with the RTL simulation
 
-The testbench produced the following output:
+The testbench produced this output:
 
 | Index | Input logit | RTL output |
 |---:|---:|---:|
@@ -129,9 +107,9 @@ The testbench produced the following output:
 | 2 | 23 | 0.017929 |
 | 3 | 19 | 0.000336 |
 
-These are the values printed by the actual simulation. They are close to the ideal Softmax values, with small differences due to the design's lookup-table approximation and fixed-point arithmetic.
+These are the values printed by the actual simulation. They are close to the ideal Softmax values, with small differences due to the lookup-table approximation and fixed-point arithmetic.
 
-The RTL uses a fixed-point representation scaled to **65535** for probability outputs. The testbench reports a sum of scaled probabilities of **65536** for this example. Small differences from the ideal sum can occur because of finite-precision arithmetic and integer rounding; this should not be interpreted as exact floating-point normalization.
+The RTL represents probability outputs using a scale of 65535. For this example, the testbench reports a sum of scaled probabilities of 65536. Small differences from the ideal sum can occur because of finite-precision arithmetic and integer rounding. The result should not be interpreted as exact floating-point normalization.
 
 ### Simulation output
 
@@ -163,17 +141,22 @@ The screenshot shows the top-level testbench signals over time. The `done` signa
 
 ### Why is the scaling factor 256 used?
 
-The RTL represents input logits in **signed Q8.8 fixed-point format**. In this format, the stored 16-bit integer is scaled by **256 (2^8)**: eight fractional bits are reserved, so one real-valued unit corresponds to 256 stored counts. To convert a stored raw value back to its real value, divide it by 256; to encode a real value, multiply it by 256 and round to an integer.
+The RTL represents input logits in signed Q8.8 fixed-point format. In this format, the stored integer is scaled by **256**, which equals 2 to the power of 8. Eight fractional bits are reserved, so one real-valued unit corresponds to 256 stored counts.
 
-$$\text{raw input} = \text{real-valued logit} \times 256,\qquad \text{real-valued logit} = \frac{\text{raw input}}{256}.$$
+- To encode a real-valued input: multiply it by 256 and round to an integer.
+- To interpret a stored value as a real number: divide it by 256.
 
-For example, the real logit $1.5$ is stored as $1.5 \times 256 = 384$, while $-2.0$ is stored as $-2.0 \times 256 = -512$. The factor 256 is a binary scaling convention, not a multiplier that changes the intended Softmax result: it lets the hardware represent fractional values using integers. The RTL must interpret the stored values consistently when computing differences and looking up exponential values.
+For example:
+- Real value `1.5` is stored as `1.5 x 256 = 384`.
+- Real value `-2.0` is stored as `-2.0 x 256 = -512`.
 
-The design computes the difference between the maximum logit and each input in this same Q8.8 representation. The exponential LUT uses steps of $1/16$; because Q8.8 has 256 counts per unit, one LUT step corresponds to $256/16 = 16$ raw counts. The interpolation logic uses the lower four bits of the difference to estimate values between LUT entries. Differences of 16.0 or greater (raw difference $4096 = 16 \times 256$) are treated as zero contribution by the LUT approximation.
+The factor 256 is a binary scaling convention. It does not change the intended Softmax result; it allows the hardware to represent fractional values using integers. The RTL must interpret the stored values consistently when calculating differences and using the exponential lookup table.
 
-To avoid implementing a general-purpose exponential operator, the RTL uses a lookup table (LUT) for the shifted difference $d = m - x_i$.
+The design computes the difference between the maximum logit and each input in this Q8.8 representation. The exponential LUT uses steps of 1/16. Since one real unit corresponds to 256 stored counts, one LUT step corresponds to `256 / 16 = 16` raw counts. The interpolation logic uses the lower four bits of the difference to estimate values between LUT entries. Differences of 16.0 or greater correspond to a raw difference of `4096` (`16 x 256`) and are treated as zero contribution by the LUT approximation.
 
-- The LUT samples $e^{-d}$ at intervals of $1/16$ and uses linear interpolation between adjacent entries.
+To avoid implementing a general-purpose exponential operator, the RTL uses a lookup table (LUT) for the shifted difference `d = m - x_i`.
+
+- The LUT samples `exp(-d)` at intervals of `1/16` and uses linear interpolation between adjacent entries.
 - The exponential values use a fixed-point scale of 32768 (Q1.15-style representation).
 - Differences of 16.0 or greater are treated as zero contribution by the approximation.
 - The probability output uses a scale of 65535, followed by integer rounding.
